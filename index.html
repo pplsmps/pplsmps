@@ -1,0 +1,299 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Edit Green Dots with Zones</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+    #map { height: 100vh; }
+    .save-btn {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 1000;
+      padding: 8px 12px;
+      background: white;
+      border: 1px solid gray;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .grayscale {
+      filter: grayscale(80%) brightness(1.1);
+    }
+  </style>
+
+<!-- Leaflet.draw styles (optional) -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+<style>
+#search-box {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1000;
+  background: white;
+  border-radius: 4px;
+  padding: 6px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+#search-input {
+  width: 220px;
+  padding: 4px;
+}
+#suggestions {
+  max-height: 200px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #ccc;
+  position: absolute;
+  top: 38px;
+  right: 10px;
+  width: 220px;
+  display: none;
+  z-index: 1001;
+}
+#suggestions div {
+  padding: 5px;
+  cursor: pointer;
+}
+#suggestions div:hover {
+  background-color: #eee;
+}
+</style>
+
+<style>
+#search-box {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1000;
+  background: white;
+  border-radius: 4px;
+  padding: 6px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+#search-input {
+  width: 220px;
+  padding: 4px;
+}
+#suggestions {
+  max-height: 200px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #ccc;
+  position: absolute;
+  top: 38px;
+  right: 10px;
+  width: 220px;
+  display: none;
+  z-index: 1001;
+}
+#suggestions div {
+  padding: 5px;
+  cursor: pointer;
+}
+#suggestions div:hover {
+  background-color: #eee;
+}
+#locate-button {
+  top: 10px;
+  left: 10px;
+  padding: 4px 8px;
+  font-size: 14px;
+  width: fit-content;
+  height: auto;
+  line-height: 1;
+  white-space: nowrap;
+  top: 10px;
+  left: 10px;
+  width: auto;
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 1000;
+  background: white;
+  padding: 6px 10px;
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  cursor: pointer;
+}
+</style>
+</head>
+<body>
+<div id="map"></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+// Move zoom control below the Find Me button
+map.zoomControl.setPosition('topleft');
+document.querySelector('.leaflet-control-zoom').style.marginTop = '50px';
+</script>
+
+<script>
+const map = L.map('map').setView([40.0289, -86.2390], 20);
+
+// Add desaturated satellite imagery
+const baseLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+  attribution: 'Tiles &copy; Esri'
+});
+baseLayer.addTo(map);
+
+baseLayer.getContainer = function() {
+  return map.getPanes().tilePane.querySelector('img')?.closest('.leaflet-layer');
+};
+map.on('tileload', function () {
+  const tiles = map.getPanes().tilePane.querySelectorAll('img');
+  tiles.forEach(tile => tile.classList.add('grayscale'));
+});
+
+// Show building zones but don't make them editable
+L.geoJSON({"type": "FeatureCollection", "features": [{"type": "Feature", "properties": {"name": "Shade and Ornamental Trees"}, "geometry": {"type": "Polygon", "coordinates": [[[-86.239355, 40.029418], [-86.239355, 40.029685], [-86.23861, 40.029685], [-86.23861, 40.029418], [-86.239355, 40.029418]]]}}, {"type": "Feature", "properties": {"name": "Evergreens"}, "geometry": {"type": "Polygon", "coordinates": [[[-86.239457, 40.029089], [-86.239457, 40.029364], [-86.238604, 40.029364], [-86.238604, 40.029089], [-86.239457, 40.029089]]]}}, {"type": "Feature", "properties": {"name": "Shrubs"}, "geometry": {"type": "Polygon", "coordinates": [[[-86.23935, 40.028736], [-86.23935, 40.028986], [-86.238642, 40.028986], [-86.238642, 40.028736], [-86.23935, 40.028736]]]}}, {"type": "Feature", "properties": {"name": "Shade Perennials"}, "geometry": {"type": "Polygon", "coordinates": [[[-86.240299, 40.028288], [-86.240299, 40.028715], [-86.239956, 40.028715], [-86.239956, 40.028288], [-86.240299, 40.028288]]]}}, {"type": "Feature", "properties": {"name": "Sun Perennials"}, "geometry": {"type": "Polygon", "coordinates": [[[-86.239334, 40.028346], [-86.239334, 40.028691], [-86.238604, 40.028691], [-86.238604, 40.028346], [-86.239334, 40.028346]]]}}, {"type": "Feature", "properties": {"name": "Seasonal Color/Annuals"}, "geometry": {"type": "Polygon", "coordinates": [[[-86.239457, 40.028001], [-86.239457, 40.028346], [-86.23876, 40.028346], [-86.23876, 40.028001], [-86.239457, 40.028001]]]}}, {"type": "Feature", "properties": {"name": "Flowering Trees"}, "geometry": {"type": "Polygon", "coordinates": [[[-86.239462, 40.028354], [-86.239462, 40.028991], [-86.239344, 40.028991], [-86.239344, 40.028354], [-86.239462, 40.028354]]]}}, {"type": "Feature", "properties": {"name": "Boxwoods"}, "geometry": {"type": "Polygon", "coordinates": [[[-86.239344, 40.028991], [-86.239344, 40.02904], [-86.238642, 40.02904], [-86.238642, 40.028991], [-86.239344, 40.028991]]]}}, {"type": "Feature", "properties": {"name": "Japanese Maples"}, "geometry": {"type": "Polygon", "coordinates": [[[-86.238765, 40.027992], [-86.238765, 40.028346], [-86.23854, 40.028346], [-86.23854, 40.027992], [-86.238765, 40.027992]]]}}, {"type": "Feature", "properties": {"name": "Flowering Trees"}, "geometry": {"type": "Polygon", "coordinates": [[[-86.238636, 40.02874], [-86.238636, 40.02904], [-86.238556, 40.02904], [-86.238556, 40.02874], [-86.238636, 40.02874]]]}}, {"type": "Feature", "properties": {"name": "EMPLOYEES ONLY", "access": "restricted"}, "geometry": {"type": "Polygon", "coordinates": [[[-86.240289, 40.027972], [-86.240289, 40.028284], [-86.239951, 40.028284], [-86.239951, 40.027972], [-86.240289, 40.027972]]]}}, {"type": "Feature", "properties": {"name": "EMPLOYEES ONLY", "access": "restricted"}, "geometry": {"type": "Polygon", "coordinates": [[[-86.240348, 40.029167], [-86.240348, 40.029504], [-86.239602, 40.029504], [-86.239602, 40.029167], [-86.240348, 40.029167]]]}}, {"type": "Feature", "properties": {"name": "EMPLOYEES ONLY", "access": "restricted"}, "geometry": {"type": "Polygon", "coordinates": [[[-86.239865, 40.028736], [-86.239865, 40.029122], [-86.239597, 40.029122], [-86.239597, 40.028736], [-86.239865, 40.028736]]]}}, {"type": "Feature", "properties": {"name": "EMPLOYEES ONLY", "access": "restricted"}, "geometry": {"type": "Polygon", "coordinates": [[[-86.238481, 40.028793], [-86.238481, 40.029048], [-86.237864, 40.029048], [-86.237864, 40.028793], [-86.238481, 40.028793]]]}}, {"type": "Feature", "properties": {"name": "EMPLOYEES ONLY", "access": "restricted"}, "geometry": {"type": "Polygon", "coordinates": [[[-86.238384, 40.027976], [-86.238384, 40.0286], [-86.237837, 40.0286], [-86.237837, 40.027976], [-86.238384, 40.027976]]]}}, {"type": "Feature", "properties": {"name": "EMPLOYEES ONLY", "access": "restricted"}, "geometry": {"type": "Polygon", "coordinates": [[[-86.238207, 40.029085], [-86.238207, 40.029397], [-86.237875, 40.029397], [-86.237875, 40.029085], [-86.238207, 40.029085]]]}}, {"type": "Feature", "properties": {"name": "EMPLOYEES ONLY", "access": "restricted"}, "geometry": {"type": "Polygon", "coordinates": [[[-86.238556, 40.029081], [-86.238556, 40.029397], [-86.238239, 40.029397], [-86.238239, 40.029081], [-86.238556, 40.029081]]]}}, {"type": "Feature", "properties": {"name": "EMPLOYEES ONLY", "access": "restricted"}, "geometry": {"type": "Polygon", "coordinates": [[[-86.239693, 40.028317], [-86.239693, 40.028592], [-86.239575, 40.028592], [-86.239575, 40.028317], [-86.239693, 40.028317]]]}}, {"type": "Feature", "properties": {"name": "EMPLOYEES ONLY", "access": "restricted"}, "geometry": {"type": "Polygon", "coordinates": [[[-86.239854, 40.028317], [-86.239854, 40.028592], [-86.239736, 40.028592], [-86.239736, 40.028317], [-86.239854, 40.028317]]]}}, {"type": "Feature", "properties": {"name": "EMPLOYEES ONLY", "access": "restricted"}, "geometry": {"type": "Polygon", "coordinates": [[[-86.239843, 40.028095], [-86.239843, 40.028243], [-86.239581, 40.028243], [-86.239581, 40.028095], [-86.239843, 40.028095]]]}}]}, {
+  style: function(feature) {
+    if (feature.properties.access === "restricted") {
+      return {
+        color: "#444",
+        weight: 1,
+        fillOpacity: 0.8,
+        dashArray: "5,3"
+      };
+    }
+    return {
+      color: "#666",
+      fillColor: "#cce5df",
+      weight: 1,
+      fillOpacity: 0.4
+    };
+  },
+  onEachFeature: function (feature, layer) {
+    const name = feature.properties.name;
+    if (name) {
+      layer.bindTooltip(name, { direction: 'top' });
+    }
+  }
+}).addTo(map);
+
+
+map.on(L.Draw.Event.CREATED, function (e) {
+  editableDots.addLayer(e.layer);
+});
+
+
+// Move zoom control below the Find Me button
+map.zoomControl.setPosition('topleft');
+document.querySelector('.leaflet-control-zoom').style.marginTop = '50px';
+</script>
+
+
+<script>
+// Add the new 'Roses' zone directly to the map
+var roseFeature = {"type": "Feature", "properties": {"name": "Roses"}, "geometry": {"type": "Polygon", "coordinates": [[[-86.239581, 40.028321], [-86.239581, 40.028592], [-86.239516, 40.028592], [-86.239516, 40.028321], [-86.239581, 40.028321]]]}};
+roseFeature.properties.name = "Roses";
+var roseLayer = L.geoJSON(roseFeature, {
+  style: { color: '#666', fillOpacity: 0.3 },
+  onEachFeature: function (feature, layer) {
+    if (feature.properties && feature.properties.name) {
+      layer.bindPopup(feature.properties.name);
+    }
+  }
+}).addTo(map);
+
+// Move zoom control below the Find Me button
+map.zoomControl.setPosition('topleft');
+document.querySelector('.leaflet-control-zoom').style.marginTop = '50px';
+</script>
+
+
+<!-- Search UI -->
+<div id="search-box">
+  <input id="search-input" type="text" placeholder="Search plant..." autocomplete="off"/>
+</div>
+<div id="suggestions"></div>
+
+<script>
+const plantData = [{"name": "acer", "zones": [{"zone": "Japanese Maples", "label": "Japanese Maple (Acer)"}, {"zone": "Shade And Ornamental Trees", "label": "Maple (Acer)"}], "label": "Japanese Maple (Acer)"}, {"name": "japanese maple", "zones": [{"zone": "Japanese Maples", "label": "Japanese Maple (Acer)"}], "label": "Japanese Maple (Acer)"}, {"name": "maple", "zones": [{"zone": "Shade And Ornamental Trees", "label": "Maple (Acer)"}], "label": "Maple (Acer)"}, {"name": "achillea", "zones": [{"zone": "Sun Perennials", "label": "Yarrow (Achillea)"}], "label": "Yarrow (Achillea)"}, {"name": "yarrow", "zones": [{"zone": "Sun Perennials", "label": "Yarrow (Achillea)"}], "label": "Yarrow (Achillea)"}, {"name": "aconitum", "zones": [{"zone": "Sun Perennials", "label": "Monkshood (Aconitum)"}], "label": "Monkshood (Aconitum)"}, {"name": "monkshood", "zones": [{"zone": "Sun Perennials", "label": "Monkshood (Aconitum)"}], "label": "Monkshood (Aconitum)"}, {"name": "aesculus", "zones": [{"zone": "Shade And Ornamental Trees", "label": "Buckeye (Aesculus)"}], "label": "Buckeye (Aesculus)"}, {"name": "buckeye", "zones": [{"zone": "Shade And Ornamental Trees", "label": "Buckeye (Aesculus)"}], "label": "Buckeye (Aesculus)"}, {"name": "agastache", "zones": [{"zone": "Sun Perennials", "label": "Anise Hyssop (Agastache)"}], "label": "Anise Hyssop (Agastache)"}, {"name": "anise hyssop", "zones": [{"zone": "Sun Perennials", "label": "Anise Hyssop (Agastache)"}], "label": "Anise Hyssop (Agastache)"}, {"name": "ageratum", "zones": [{"zone": "Annuals", "label": "Floss Flower (Ageratum)"}], "label": "Floss Flower (Ageratum)"}, {"name": "floss flower", "zones": [{"zone": "Annuals", "label": "Floss Flower (Ageratum)"}], "label": "Floss Flower (Ageratum)"}, {"name": "alcea", "zones": [{"zone": "Sun Perennials", "label": "Hollyhock (Alcea)"}], "label": "Hollyhock (Alcea)"}, {"name": "hollyhock", "zones": [{"zone": "Sun Perennials", "label": "Hollyhock (Alcea)"}], "label": "Hollyhock (Alcea)"}, {"name": "alchemilla", "zones": [{"zone": "Shade Perennials", "label": "Lady\u2019s Mantle (Alchemilla)"}], "label": "Lady\u2019s Mantle (Alchemilla)"}, {"name": "lady\u2019s mantle", "zones": [{"zone": "Shade Perennials", "label": "Lady\u2019s Mantle (Alchemilla)"}], "label": "Lady\u2019s Mantle (Alchemilla)"}, {"name": "allium", "zones": [{"zone": "Sun Perennials", "label": "Ornamental Onion (allium)"}], "label": "Ornamental Onion (allium)"}, {"name": "ornamental onion", "zones": [{"zone": "Sun Perennials", "label": "Ornamental Onion (allium)"}], "label": "Ornamental Onion (allium)"}, {"name": "almsonia", "zones": [{"zone": "Sun Perennials", "label": "Blue Star (Almsonia)"}], "label": "Blue Star (Almsonia)"}, {"name": "blue star", "zones": [{"zone": "Sun Perennials", "label": "Blue Star (Almsonia)"}], "label": "Blue Star (Almsonia)"}, {"name": "amelanchier", "zones": [{"zone": "Flowering Trees", "label": "Serviceberry (Amelanchier)"}, {"zone": "Shade And Ornamental Trees", "label": "Serviceberry (Amelanchier)"}], "label": "Serviceberry (Amelanchier)"}, {"name": "serviceberry", "zones": [{"zone": "Flowering Trees", "label": "Serviceberry (Amelanchier)"}, {"zone": "Shade And Ornamental Trees", "label": "Serviceberry (Amelanchier)"}], "label": "Serviceberry (Amelanchier)"}, {"name": "anemone", "zones": [{"zone": "Shade Perennials", "label": "Windflower (Anemone)"}], "label": "Windflower (Anemone)"}, {"name": "windflower", "zones": [{"zone": "Shade Perennials", "label": "Windflower (Anemone)"}], "label": "Windflower (Anemone)"}, {"name": "angelonia", "zones": [{"zone": "Annuals", "label": "Summer Snapdragon (Angelonia)"}], "label": "Summer Snapdragon (Angelonia)"}, {"name": "summer snapdragon", "zones": [{"zone": "Annuals", "label": "Summer Snapdragon (Angelonia)"}], "label": "Summer Snapdragon (Angelonia)"}, {"name": "aronia", "zones": [{"zone": "Shrubs", "label": "Chokeberry (Aronia)"}], "label": "Chokeberry (Aronia)"}, {"name": "chokeberry", "zones": [{"zone": "Shrubs", "label": "Chokeberry (Aronia)"}], "label": "Chokeberry (Aronia)"}, {"name": "artemisia", "zones": [{"zone": "Sun Perennials", "label": "Wormwood (Artemisia)"}], "label": "Wormwood (Artemisia)"}, {"name": "wormwood", "zones": [{"zone": "Sun Perennials", "label": "Wormwood (Artemisia)"}], "label": "Wormwood (Artemisia)"}, {"name": "asclepias", "zones": [{"zone": "Sun Perennials", "label": "Milkweed (Asclepias)"}], "label": "Milkweed (Asclepias)"}, {"name": "milkweed", "zones": [{"zone": "Sun Perennials", "label": "Milkweed (Asclepias)"}], "label": "Milkweed (Asclepias)"}, {"name": "asparagus", "zones": [{"zone": "Annuals", "label": "Asparagus Fern (Asparagus)"}], "label": "Asparagus Fern (Asparagus)"}, {"name": "asparagus fern", "zones": [{"zone": "Annuals", "label": "Asparagus Fern (Asparagus)"}], "label": "Asparagus Fern (Asparagus)"}, {"name": "aster", "zones": [{"zone": "Sun Perennials", "label": "Aster"}], "label": "Aster"}, {"name": "astilbe", "zones": [{"zone": "Shade Perennials", "label": "False Spirea (Astilbe)"}], "label": "False Spirea (Astilbe)"}, {"name": "false spirea", "zones": [{"zone": "Shade Perennials", "label": "False Spirea (Astilbe)"}], "label": "False Spirea (Astilbe)"}, {"name": "azalea", "zones": [{"zone": "Shade Perennials", "label": "Azalea"}], "label": "Azalea"}, {"name": "baptisia", "zones": [{"zone": "Sun Perennials", "label": "False Indigo (Baptisia)"}], "label": "False Indigo (Baptisia)"}, {"name": "false indigo", "zones": [{"zone": "Sun Perennials", "label": "False Indigo (Baptisia)"}], "label": "False Indigo (Baptisia)"}, {"name": "begonia", "zones": [{"zone": "Annuals", "label": "Begonia"}], "label": "Begonia"}, {"name": "betula", "zones": [{"zone": "Shade And Ornamental Trees", "label": "Birch (Betula)"}], "label": "Birch (Betula)"}, {"name": "birch", "zones": [{"zone": "Shade And Ornamental Trees", "label": "Birch (Betula)"}], "label": "Birch (Betula)"}, {"name": "boxus", "zones": [{"zone": "Boxwoods", "label": "Boxwood (boxus)"}], "label": "Boxwood (boxus)"}, {"name": "boxwood", "zones": [{"zone": "Boxwoods", "label": "Boxwood (boxus)"}], "label": "Boxwood (boxus)"}, {"name": "brunnera", "zones": [{"zone": "Shade Perennials", "label": "Siberian Bugloss (Brunnera)"}], "label": "Siberian Bugloss (Brunnera)"}, {"name": "siberian bugloss", "zones": [{"zone": "Shade Perennials", "label": "Siberian Bugloss (Brunnera)"}], "label": "Siberian Bugloss (Brunnera)"}, {"name": "buddleia", "zones": [{"zone": "Shrubs", "label": "Butterfly Bush (Buddleia)"}], "label": "Butterfly Bush (Buddleia)"}, {"name": "butterfly bush", "zones": [{"zone": "Shrubs", "label": "Butterfly Bush (Buddleia)"}], "label": "Butterfly Bush (Buddleia)"}, {"name": "caladium", "zones": [{"zone": "Annuals", "label": "Caladium"}], "label": "Caladium"}, {"name": "calamagrostis", "zones": [{"zone": "Sun Perennials", "label": "Feather Reed Grass (Calamagrostis)"}], "label": "Feather Reed Grass (Calamagrostis)"}, {"name": "feather reed grass", "zones": [{"zone": "Sun Perennials", "label": "Feather Reed Grass (Calamagrostis)"}], "label": "Feather Reed Grass (Calamagrostis)"}, {"name": "calamintha", "zones": [{"zone": "Sun Perennials", "label": "Calamint (Calamintha)"}], "label": "Calamint (Calamintha)"}, {"name": "calamint", "zones": [{"zone": "Sun Perennials", "label": "Calamint (Calamintha)"}], "label": "Calamint (Calamintha)"}, {"name": "callicarpa", "zones": [{"zone": "Shrubs", "label": "Beautyberry (Callicarpa)"}], "label": "Beautyberry (Callicarpa)"}, {"name": "beautyberry", "zones": [{"zone": "Shrubs", "label": "Beautyberry (Callicarpa)"}], "label": "Beautyberry (Callicarpa)"}, {"name": "campanula", "zones": [{"zone": "Sun Perennials", "label": "Bellflower (Campanula)"}], "label": "Bellflower (Campanula)"}, {"name": "bellflower", "zones": [{"zone": "Sun Perennials", "label": "Bellflower (Campanula)"}], "label": "Bellflower (Campanula)"}, {"name": "campsis", "zones": [{"zone": "Sun Perennials", "label": "Trumpet Vine (campsis)"}], "label": "Trumpet Vine (campsis)"}, {"name": "trumpet vine", "zones": [{"zone": "Sun Perennials", "label": "Trumpet Vine (campsis)"}], "label": "Trumpet Vine (campsis)"}, {"name": "canna lily", "zones": [{"zone": "Annuals", "label": "Canna Lily"}], "label": "Canna Lily"}, {"name": "careopsis", "zones": [{"zone": "Sun Perennials", "label": "Tickseed (Careopsis)"}], "label": "Tickseed (Careopsis)"}, {"name": "tickseed", "zones": [{"zone": "Sun Perennials", "label": "Tickseed (Careopsis)"}], "label": "Tickseed (Careopsis)"}, {"name": "carex", "zones": [{"zone": "Shade Perennials", "label": "Sedge (Carex)"}, {"zone": "Sun Perennials", "label": "Sedge (Carex)"}], "label": "Sedge (Carex)"}, {"name": "sedge", "zones": [{"zone": "Shade Perennials", "label": "Sedge (Carex)"}, {"zone": "Sun Perennials", "label": "Sedge (Carex)"}], "label": "Sedge (Carex)"}, {"name": "carpinus", "zones": [{"zone": "Flowering Trees", "label": "Hornbeam (carpinus)"}, {"zone": "Shade And Ornamental Trees", "label": "Hornbeam (Carpinus)"}], "label": "Hornbeam (carpinus)"}, {"name": "hornbeam", "zones": [{"zone": "Flowering Trees", "label": "Hornbeam (carpinus)"}, {"zone": "Shade And Ornamental Trees", "label": "Hornbeam (Carpinus)"}], "label": "Hornbeam (carpinus)"}, {"name": "caryopteris", "zones": [{"zone": "Shrubs", "label": "Bluebeard (Caryopteris)"}], "label": "Bluebeard (Caryopteris)"}, {"name": "bluebeard", "zones": [{"zone": "Shrubs", "label": "Bluebeard (Caryopteris)"}], "label": "Bluebeard (Caryopteris)"}, {"name": "cedrus", "zones": [{"zone": "Evergreens", "label": "Cedar (Cedrus)"}], "label": "Cedar (Cedrus)"}, {"name": "cedar", "zones": [{"zone": "Evergreens", "label": "Cedar (Cedrus)"}], "label": "Cedar (Cedrus)"}, {"name": "cercis", "zones": [{"zone": "Flowering Trees", "label": "Redbud (Cercis)"}, {"zone": "Shade And Ornamental Trees", "label": "Redbud (Cercis)"}], "label": "Redbud (Cercis)"}, {"name": "redbud", "zones": [{"zone": "Flowering Trees", "label": "Redbud (Cercis)"}, {"zone": "Shade And Ornamental Trees", "label": "Redbud (Cercis)"}], "label": "Redbud (Cercis)"}, {"name": "chamaecyparis", "zones": [{"zone": "Evergreens", "label": "False Cypress (Chamaecyparis)"}], "label": "False Cypress (Chamaecyparis)"}, {"name": "false cypress", "zones": [{"zone": "Evergreens", "label": "False Cypress (Chamaecyparis)"}], "label": "False Cypress (Chamaecyparis)"}, {"name": "chelone", "zones": [{"zone": "Sun Perennials", "label": "Turtlehead (Chelone)"}], "label": "Turtlehead (Chelone)"}, {"name": "turtlehead", "zones": [{"zone": "Sun Perennials", "label": "Turtlehead (Chelone)"}], "label": "Turtlehead (Chelone)"}, {"name": "cleome", "zones": [{"zone": "Annuals", "label": "Spider Flower (Cleome)"}], "label": "Spider Flower (Cleome)"}, {"name": "spider flower", "zones": [{"zone": "Annuals", "label": "Spider Flower (Cleome)"}], "label": "Spider Flower (Cleome)"}, {"name": "clethra alnifolia", "zones": [{"zone": "Shrubs", "label": "Summersweet (Clethra Alnifolia)"}], "label": "Summersweet (Clethra Alnifolia)"}, {"name": "summersweet", "zones": [{"zone": "Shrubs", "label": "Summersweet (Clethra Alnifolia)"}], "label": "Summersweet (Clethra Alnifolia)"}, {"name": "coleus", "zones": [{"zone": "Annuals", "label": "Coleus"}], "label": "Coleus"}, {"name": "cornus", "zones": [{"zone": "Flowering Trees", "label": "Dogwood (Cornus)"}, {"zone": "Shrubs", "label": "Dogwood (Cornus)"}], "label": "Dogwood (Cornus)"}, {"name": "dogwood", "zones": [{"zone": "Flowering Trees", "label": "Dogwood (Cornus)"}, {"zone": "Shrubs", "label": "Dogwood (Cornus)"}], "label": "Dogwood (Cornus)"}, {"name": "cotinus", "zones": [{"zone": "Shrubs", "label": "Smoke Bush (Cotinus)"}], "label": "Smoke Bush (Cotinus)"}, {"name": "smoke bush", "zones": [{"zone": "Shrubs", "label": "Smoke Bush (Cotinus)"}], "label": "Smoke Bush (Cotinus)"}, {"name": "crocosmia", "zones": [{"zone": "Sun Perennials", "label": "Montbretia (Crocosmia)"}], "label": "Montbretia (Crocosmia)"}, {"name": "montbretia", "zones": [{"zone": "Sun Perennials", "label": "Montbretia (Crocosmia)"}], "label": "Montbretia (Crocosmia)"}, {"name": "croton", "zones": [{"zone": "Annuals", "label": "Croton"}], "label": "Croton"}, {"name": "cuphea", "zones": [{"zone": "Annuals", "label": "Cigar Plant (Cuphea)"}], "label": "Cigar Plant (Cuphea)"}, {"name": "cigar plant", "zones": [{"zone": "Annuals", "label": "Cigar Plant (Cuphea)"}], "label": "Cigar Plant (Cuphea)"}, {"name": "cyperus", "zones": [{"zone": "Annuals", "label": "Umbrella Sedge (cyperus)"}], "label": "Umbrella Sedge (cyperus)"}, {"name": "umbrella sedge", "zones": [{"zone": "Annuals", "label": "Umbrella Sedge (cyperus)"}], "label": "Umbrella Sedge (cyperus)"}, {"name": "dahlia", "zones": [{"zone": "Annuals", "label": "Dahlia"}], "label": "Dahlia"}, {"name": "deutzia", "zones": [{"zone": "Shrubs", "label": "Deutzia"}], "label": "Deutzia"}, {"name": "dianthus", "zones": [{"zone": "Sun Perennials", "label": "Pinks (Dianthus)"}], "label": "Pinks (Dianthus)"}, {"name": "pinks", "zones": [{"zone": "Sun Perennials", "label": "Pinks (Dianthus)"}], "label": "Pinks (Dianthus)"}, {"name": "dicentra", "zones": [{"zone": "Shade Perennials", "label": "Bleeding Heart (Dicentra)"}], "label": "Bleeding Heart (Dicentra)"}, {"name": "bleeding heart", "zones": [{"zone": "Shade Perennials", "label": "Bleeding Heart (Dicentra)"}], "label": "Bleeding Heart (Dicentra)"}, {"name": "dichondra", "zones": [{"zone": "Annuals", "label": "Dichondra"}], "label": "Dichondra"}, {"name": "diervilla", "zones": [{"zone": "Shrubs", "label": "Bush Honeysuckle (Diervilla)"}], "label": "Bush Honeysuckle (Diervilla)"}, {"name": "bush honeysuckle", "zones": [{"zone": "Shrubs", "label": "Bush Honeysuckle (Diervilla)"}], "label": "Bush Honeysuckle (Diervilla)"}, {"name": "digitalis", "zones": [{"zone": "Sun Perennials", "label": "Foxglove (Digitalis)"}], "label": "Foxglove (Digitalis)"}, {"name": "foxglove", "zones": [{"zone": "Sun Perennials", "label": "Foxglove (Digitalis)"}], "label": "Foxglove (Digitalis)"}, {"name": "dipladenia", "zones": [{"zone": "Annuals", "label": "Dipladenia"}], "label": "Dipladenia"}, {"name": "echinacea", "zones": [{"zone": "Sun Perennials", "label": "Coneflower (Echinacea)"}], "label": "Coneflower (Echinacea)"}, {"name": "coneflower", "zones": [{"zone": "Sun Perennials", "label": "Coneflower (Echinacea)"}], "label": "Coneflower (Echinacea)"}, {"name": "echniops", "zones": [{"zone": "Sun Perennials", "label": "Globe Thistle (Echniops)"}], "label": "Globe Thistle (Echniops)"}, {"name": "globe thistle", "zones": [{"zone": "Sun Perennials", "label": "Globe Thistle (Echniops)"}], "label": "Globe Thistle (Echniops)"}, {"name": "eunymus", "zones": [{"zone": "Shrubs", "label": "Euonymus (Eunymus)"}], "label": "Euonymus (Eunymus)"}, {"name": "euonymus", "zones": [{"zone": "Shrubs", "label": "Euonymus (Eunymus)"}], "label": "Euonymus (Eunymus)"}, {"name": "eupatorium", "zones": [{"zone": "Sun Perennials", "label": "Joe Pye Weed (Eupatorium)"}], "label": "Joe Pye Weed (Eupatorium)"}, {"name": "joe pye weed", "zones": [{"zone": "Sun Perennials", "label": "Joe Pye Weed (Eupatorium)"}], "label": "Joe Pye Weed (Eupatorium)"}, {"name": "fagus", "zones": [{"zone": "Shade And Ornamental Trees", "label": "Beech (Fagus)"}], "label": "Beech (Fagus)"}, {"name": "beech", "zones": [{"zone": "Shade And Ornamental Trees", "label": "Beech (Fagus)"}], "label": "Beech (Fagus)"}, {"name": "fern", "zones": [{"zone": "Shade Perennials", "label": "Fern"}], "label": "Fern"}, {"name": "forsythia", "zones": [{"zone": "Shrubs", "label": "Forsythia"}], "label": "Forsythia"}, {"name": "fothergilla", "zones": [{"zone": "Shrubs", "label": "Fothergilla"}], "label": "Fothergilla"}, {"name": "gallum", "zones": [{"zone": "Sun Perennials", "label": "Bedstraw (Gallum)"}], "label": "Bedstraw (Gallum)"}, {"name": "bedstraw", "zones": [{"zone": "Sun Perennials", "label": "Bedstraw (Gallum)"}], "label": "Bedstraw (Gallum)"}, {"name": "gaura", "zones": [{"zone": "Annuals", "label": "Wandflower (Gaura)"}], "label": "Wandflower (Gaura)"}, {"name": "wandflower", "zones": [{"zone": "Annuals", "label": "Wandflower (Gaura)"}], "label": "Wandflower (Gaura)"}, {"name": "gazania", "zones": [{"zone": "Annuals", "label": "Treasure Flower (Gazania)"}], "label": "Treasure Flower (Gazania)"}, {"name": "treasure flower", "zones": [{"zone": "Annuals", "label": "Treasure Flower (Gazania)"}], "label": "Treasure Flower (Gazania)"}, {"name": "geranium", "zones": [{"zone": "Sun Perennials", "label": "Cranesbill (Geranium)"}], "label": "Cranesbill (Geranium)"}, {"name": "cranesbill", "zones": [{"zone": "Sun Perennials", "label": "Cranesbill (Geranium)"}], "label": "Cranesbill (Geranium)"}, {"name": "gerbera", "zones": [{"zone": "Annuals", "label": "Gerbera Daisy (gerbera)"}], "label": "Gerbera Daisy (gerbera)"}, {"name": "gerbera daisy", "zones": [{"zone": "Annuals", "label": "Gerbera Daisy (gerbera)"}], "label": "Gerbera Daisy (gerbera)"}, {"name": "geum", "zones": [{"zone": "Sun Perennials", "label": "Avens (Geum)"}], "label": "Avens (Geum)"}, {"name": "avens", "zones": [{"zone": "Sun Perennials", "label": "Avens (Geum)"}], "label": "Avens (Geum)"}, {"name": "gleditsia", "zones": [{"zone": "Shade And Ornamental Trees", "label": "Honey Locust (gleditsia)"}], "label": "Honey Locust (gleditsia)"}, {"name": "honey locust", "zones": [{"zone": "Shade And Ornamental Trees", "label": "Honey Locust (gleditsia)"}], "label": "Honey Locust (gleditsia)"}, {"name": "hakonechloa", "zones": [{"zone": "Shade Perennials", "label": "Japanese Forest Grass (Hakonechloa)"}], "label": "Japanese Forest Grass (Hakonechloa)"}, {"name": "japanese forest grass", "zones": [{"zone": "Shade Perennials", "label": "Japanese Forest Grass (Hakonechloa)"}], "label": "Japanese Forest Grass (Hakonechloa)"}, {"name": "hedera", "zones": [{"zone": "Annuals", "label": "Ivy (Hedera)"}], "label": "Ivy (Hedera)"}, {"name": "ivy", "zones": [{"zone": "Annuals", "label": "Ivy (Hedera)"}], "label": "Ivy (Hedera)"}, {"name": "helianthus", "zones": [{"zone": "Sun Perennials", "label": "Sunflower (Helianthus)"}], "label": "Sunflower (Helianthus)"}, {"name": "sunflower", "zones": [{"zone": "Sun Perennials", "label": "Sunflower (Helianthus)"}, {"zone": "Annuals", "label": "Sunflower"}], "label": "Sunflower (Helianthus)"}, {"name": "helichrysum", "zones": [{"zone": "Annuals", "label": "Strawflower (Helichrysum)"}], "label": "Strawflower (Helichrysum)"}, {"name": "strawflower", "zones": [{"zone": "Annuals", "label": "Strawflower (Helichrysum)"}], "label": "Strawflower (Helichrysum)"}, {"name": "heliopsis", "zones": [{"zone": "Sun Perennials", "label": "False Sunflower (Heliopsis)"}], "label": "False Sunflower (Heliopsis)"}, {"name": "false sunflower", "zones": [{"zone": "Sun Perennials", "label": "False Sunflower (Heliopsis)"}], "label": "False Sunflower (Heliopsis)"}, {"name": "helleborus", "zones": [{"zone": "Shade Perennials", "label": "Lenten Rose (Helleborus)"}], "label": "Lenten Rose (Helleborus)"}, {"name": "lenten rose", "zones": [{"zone": "Shade Perennials", "label": "Lenten Rose (Helleborus)"}], "label": "Lenten Rose (Helleborus)"}, {"name": "hemerocallis", "zones": [{"zone": "Sun Perennials", "label": "Daylily (hemerocallis)"}], "label": "Daylily (hemerocallis)"}, {"name": "daylily", "zones": [{"zone": "Sun Perennials", "label": "Daylily (hemerocallis)"}], "label": "Daylily (hemerocallis)"}, {"name": "hibiscus", "zones": [{"zone": "Shrubs", "label": "Hibiscus"}], "label": "Hibiscus"}, {"name": "hosta", "zones": [{"zone": "Shade Perennials", "label": "Plantain Lily (Hosta)"}], "label": "Plantain Lily (Hosta)"}, {"name": "plantain lily", "zones": [{"zone": "Shade Perennials", "label": "Plantain Lily (Hosta)"}], "label": "Plantain Lily (Hosta)"}, {"name": "hpatacodium", "zones": [{"zone": "Flowering Trees", "label": "Seven-Son Flower (Hpatacodium)"}], "label": "Seven-Son Flower (Hpatacodium)"}, {"name": "seven-son flower", "zones": [{"zone": "Flowering Trees", "label": "Seven-Son Flower (Hpatacodium)"}], "label": "Seven-Son Flower (Hpatacodium)"}, {"name": "huechera", "zones": [{"zone": "Shade Perennials", "label": "Coral Bells (Huechera)"}], "label": "Coral Bells (Huechera)"}, {"name": "coral bells", "zones": [{"zone": "Shade Perennials", "label": "Coral Bells (Huechera)"}], "label": "Coral Bells (Huechera)"}, {"name": "hydrangea", "zones": [{"zone": "Flowering Trees", "label": "Hydrangea"}, {"zone": "Shrubs", "label": "Hydrangea"}], "label": "Hydrangea"}, {"name": "hypericum", "zones": [{"zone": "Shrubs", "label": "St. John\u2019s Wort (hypericum)"}], "label": "St. John\u2019s Wort (hypericum)"}, {"name": "st. john\u2019s wort", "zones": [{"zone": "Shrubs", "label": "St. John\u2019s Wort (hypericum)"}], "label": "St. John\u2019s Wort (hypericum)"}, {"name": "hypoestes", "zones": [{"zone": "Annuals", "label": "Polka Dot Plant (Hypoestes)"}], "label": "Polka Dot Plant (Hypoestes)"}, {"name": "polka dot plant", "zones": [{"zone": "Annuals", "label": "Polka Dot Plant (Hypoestes)"}], "label": "Polka Dot Plant (Hypoestes)"}, {"name": "ilex", "zones": [{"zone": "Shrubs", "label": "Holly (Ilex)"}, {"zone": "Evergreens", "label": "Holly (Ilex)"}], "label": "Holly (Ilex)"}, {"name": "holly", "zones": [{"zone": "Shrubs", "label": "Holly (Ilex)"}, {"zone": "Evergreens", "label": "Holly (Ilex)"}], "label": "Holly (Ilex)"}, {"name": "impatients", "zones": [{"zone": "Annuals", "label": "Impatiens (Impatients)"}], "label": "Impatiens (Impatients)"}, {"name": "impatiens", "zones": [{"zone": "Annuals", "label": "Impatiens (Impatients)"}], "label": "Impatiens (Impatients)"}, {"name": "imperata", "zones": [{"zone": "Sun Perennials", "label": "Japanese Blood Grass (Imperata)"}], "label": "Japanese Blood Grass (Imperata)"}, {"name": "japanese blood grass", "zones": [{"zone": "Sun Perennials", "label": "Japanese Blood Grass (Imperata)"}], "label": "Japanese Blood Grass (Imperata)"}, {"name": "ipomoea", "zones": [{"zone": "Annuals", "label": "Morning Glory (Ipomoea)"}], "label": "Morning Glory (Ipomoea)"}, {"name": "morning glory", "zones": [{"zone": "Annuals", "label": "Morning Glory (Ipomoea)"}], "label": "Morning Glory (Ipomoea)"}, {"name": "iris", "zones": [{"zone": "Sun Perennials", "label": "Iris"}], "label": "Iris"}, {"name": "itea", "zones": [{"zone": "Shrubs", "label": "Sweetspire (itea)"}], "label": "Sweetspire (itea)"}, {"name": "sweetspire", "zones": [{"zone": "Shrubs", "label": "Sweetspire (itea)"}], "label": "Sweetspire (itea)"}, {"name": "juncus", "zones": [{"zone": "Annuals", "label": "Rush (Juncus)"}, {"zone": "Sun Perennials", "label": "Rush (Juncus)"}], "label": "Rush (Juncus)"}, {"name": "rush", "zones": [{"zone": "Annuals", "label": "Rush (Juncus)"}, {"zone": "Sun Perennials", "label": "Rush (Juncus)"}], "label": "Rush (Juncus)"}, {"name": "juniperus", "zones": [{"zone": "Evergreens", "label": "Juniper (Juniperus)"}], "label": "Juniper (Juniperus)"}, {"name": "juniper", "zones": [{"zone": "Evergreens", "label": "Juniper (Juniperus)"}], "label": "Juniper (Juniperus)"}, {"name": "koelreuteria", "zones": [{"zone": "Flowering Trees", "label": "Golden Rain Tree (Koelreuteria)"}], "label": "Golden Rain Tree (Koelreuteria)"}, {"name": "golden rain tree", "zones": [{"zone": "Flowering Trees", "label": "Golden Rain Tree (Koelreuteria)"}], "label": "Golden Rain Tree (Koelreuteria)"}, {"name": "lagerstroemia", "zones": [{"zone": "Shrubs", "label": "Crape Myrtle (Lagerstroemia)"}], "label": "Crape Myrtle (Lagerstroemia)"}, {"name": "crape myrtle", "zones": [{"zone": "Shrubs", "label": "Crape Myrtle (Lagerstroemia)"}], "label": "Crape Myrtle (Lagerstroemia)"}, {"name": "lamium", "zones": [{"zone": "Sun Perennials", "label": "Dead Nettle (Lamium)"}], "label": "Dead Nettle (Lamium)"}, {"name": "dead nettle", "zones": [{"zone": "Sun Perennials", "label": "Dead Nettle (Lamium)"}], "label": "Dead Nettle (Lamium)"}, {"name": "lemon grass", "zones": [{"zone": "Annuals", "label": "Lemon Grass"}], "label": "Lemon Grass"}, {"name": "leucanthemum", "zones": [{"zone": "Sun Perennials", "label": "Shasta Daisy (Leucanthemum)"}], "label": "Shasta Daisy (Leucanthemum)"}, {"name": "shasta daisy", "zones": [{"zone": "Sun Perennials", "label": "Shasta Daisy (Leucanthemum)"}], "label": "Shasta Daisy (Leucanthemum)"}, {"name": "liatris", "zones": [{"zone": "Sun Perennials", "label": "Blazing Star (Liatris)"}], "label": "Blazing Star (Liatris)"}, {"name": "blazing star", "zones": [{"zone": "Sun Perennials", "label": "Blazing Star (Liatris)"}], "label": "Blazing Star (Liatris)"}, {"name": "ligularia", "zones": [{"zone": "Shade Perennials", "label": "Leopard Plant (Ligularia)"}], "label": "Leopard Plant (Ligularia)"}, {"name": "leopard plant", "zones": [{"zone": "Shade Perennials", "label": "Leopard Plant (Ligularia)"}], "label": "Leopard Plant (Ligularia)"}, {"name": "liquidambar", "zones": [{"zone": "Shade And Ornamental Trees", "label": "Sweetgum (Liquidambar)"}], "label": "Sweetgum (Liquidambar)"}, {"name": "sweetgum", "zones": [{"zone": "Shade And Ornamental Trees", "label": "Sweetgum (Liquidambar)"}], "label": "Sweetgum (Liquidambar)"}, {"name": "liriope", "zones": [{"zone": "Sun Perennials", "label": "Lilyturf (Liriope)"}], "label": "Lilyturf (Liriope)"}, {"name": "lilyturf", "zones": [{"zone": "Sun Perennials", "label": "Lilyturf (Liriope)"}], "label": "Lilyturf (Liriope)"}, {"name": "lirodendron", "zones": [{"zone": "Shade And Ornamental Trees", "label": "Tulip Tree (lirodendron)"}], "label": "Tulip Tree (lirodendron)"}, {"name": "tulip tree", "zones": [{"zone": "Shade And Ornamental Trees", "label": "Tulip Tree (lirodendron)"}], "label": "Tulip Tree (lirodendron)"}, {"name": "lobelia", "zones": [{"zone": "Sun Perennials", "label": "Lobelia"}], "label": "Lobelia"}, {"name": "lonicera", "zones": [{"zone": "Sun Perennials", "label": "Honeysuckle (Lonicera)"}], "label": "Honeysuckle (Lonicera)"}, {"name": "honeysuckle", "zones": [{"zone": "Sun Perennials", "label": "Honeysuckle (Lonicera)"}], "label": "Honeysuckle (Lonicera)"}, {"name": "lonicera nitida", "zones": [{"zone": "Shrubs", "label": "Box Honeysuckle (Lonicera Nitida)"}], "label": "Box Honeysuckle (Lonicera Nitida)"}, {"name": "box honeysuckle", "zones": [{"zone": "Shrubs", "label": "Box Honeysuckle (Lonicera Nitida)"}], "label": "Box Honeysuckle (Lonicera Nitida)"}, {"name": "lysimachia", "zones": [{"zone": "Annuals", "label": "Creeping Jenny (Lysimachia)"}], "label": "Creeping Jenny (Lysimachia)"}, {"name": "creeping jenny", "zones": [{"zone": "Annuals", "label": "Creeping Jenny (Lysimachia)"}], "label": "Creeping Jenny (Lysimachia)"}, {"name": "magnolia", "zones": [{"zone": "Flowering Trees", "label": "Magnolia"}], "label": "Magnolia"}, {"name": "malus", "zones": [{"zone": "Flowering Trees", "label": "Crabapple (malus)"}, {"zone": "Shade And Ornamental Trees", "label": "Crabapple (Malus)"}], "label": "Crabapple (malus)"}, {"name": "crabapple", "zones": [{"zone": "Flowering Trees", "label": "Crabapple (malus)"}, {"zone": "Shade And Ornamental Trees", "label": "Crabapple (Malus)"}], "label": "Crabapple (malus)"}, {"name": "mandevilla", "zones": [{"zone": "Annuals", "label": "Mandevilla"}], "label": "Mandevilla"}, {"name": "marigold", "zones": [{"zone": "Annuals", "label": "Marigold"}], "label": "Marigold"}, {"name": "metasequoia", "zones": [{"zone": "Shade And Ornamental Trees", "label": "Dawn Redwood (Metasequoia)"}], "label": "Dawn Redwood (Metasequoia)"}, {"name": "dawn redwood", "zones": [{"zone": "Shade And Ornamental Trees", "label": "Dawn Redwood (Metasequoia)"}], "label": "Dawn Redwood (Metasequoia)"}, {"name": "miscanthus", "zones": [{"zone": "Sun Perennials", "label": "Maiden Grass (Miscanthus)"}], "label": "Maiden Grass (Miscanthus)"}, {"name": "maiden grass", "zones": [{"zone": "Sun Perennials", "label": "Maiden Grass (Miscanthus)"}], "label": "Maiden Grass (Miscanthus)"}, {"name": "monarda", "zones": [{"zone": "Sun Perennials", "label": "Bee Balm (Monarda)"}], "label": "Bee Balm (Monarda)"}, {"name": "bee balm", "zones": [{"zone": "Sun Perennials", "label": "Bee Balm (Monarda)"}], "label": "Bee Balm (Monarda)"}, {"name": "myrica", "zones": [{"zone": "Shrubs", "label": "Bayberry (myrica)"}], "label": "Bayberry (myrica)"}, {"name": "bayberry", "zones": [{"zone": "Shrubs", "label": "Bayberry (myrica)"}], "label": "Bayberry (myrica)"}, {"name": "nepeta", "zones": [{"zone": "Sun Perennials", "label": "Catmint (Nepeta)"}], "label": "Catmint (Nepeta)"}, {"name": "catmint", "zones": [{"zone": "Sun Perennials", "label": "Catmint (Nepeta)"}], "label": "Catmint (Nepeta)"}, {"name": "paeonia", "zones": [{"zone": "Shade Perennials", "label": "Peony (Paeonia)"}], "label": "Peony (Paeonia)"}, {"name": "peony", "zones": [{"zone": "Shade Perennials", "label": "Peony (Paeonia)"}], "label": "Peony (Paeonia)"}, {"name": "pampas grass", "zones": [{"zone": "Sun Perennials", "label": "Pampas Grass"}], "label": "Pampas Grass"}, {"name": "panicum", "zones": [{"zone": "Sun Perennials", "label": "Switchgrass (Panicum)"}], "label": "Switchgrass (Panicum)"}, {"name": "switchgrass", "zones": [{"zone": "Sun Perennials", "label": "Switchgrass (Panicum)"}], "label": "Switchgrass (Panicum)"}, {"name": "pennisetum", "zones": [{"zone": "Annuals", "label": "Fountain Grass (Pennisetum)"}, {"zone": "Sun Perennials", "label": "Fountain Grass (Pennisetum)"}], "label": "Fountain Grass (Pennisetum)"}, {"name": "fountain grass", "zones": [{"zone": "Annuals", "label": "Fountain Grass (Pennisetum)"}, {"zone": "Sun Perennials", "label": "Fountain Grass (Pennisetum)"}], "label": "Fountain Grass (Pennisetum)"}, {"name": "perovskia", "zones": [{"zone": "Sun Perennials", "label": "Russian Sage (perovskia)"}], "label": "Russian Sage (perovskia)"}, {"name": "russian sage", "zones": [{"zone": "Sun Perennials", "label": "Russian Sage (perovskia)"}], "label": "Russian Sage (perovskia)"}, {"name": "petunia", "zones": [{"zone": "Annuals", "label": "Petunia"}], "label": "Petunia"}, {"name": "peustemon", "zones": [{"zone": "Sun Perennials", "label": "Beardtongue (Peustemon)"}], "label": "Beardtongue (Peustemon)"}, {"name": "beardtongue", "zones": [{"zone": "Sun Perennials", "label": "Beardtongue (Peustemon)"}], "label": "Beardtongue (Peustemon)"}, {"name": "philadelphus", "zones": [{"zone": "Shrubs", "label": "Mock Orange (Philadelphus)"}], "label": "Mock Orange (Philadelphus)"}, {"name": "mock orange", "zones": [{"zone": "Shrubs", "label": "Mock Orange (Philadelphus)"}], "label": "Mock Orange (Philadelphus)"}, {"name": "phlox", "zones": [{"zone": "Sun Perennials", "label": "Phlox"}], "label": "Phlox"}, {"name": "physocarpus", "zones": [{"zone": "Shrubs", "label": "Ninebark (Physocarpus)"}, {"zone": "Shade And Ornamental Trees", "label": "Ninebark (Physocarpus)"}], "label": "Ninebark (Physocarpus)"}, {"name": "ninebark", "zones": [{"zone": "Shrubs", "label": "Ninebark (Physocarpus)"}, {"zone": "Shade And Ornamental Trees", "label": "Ninebark (Physocarpus)"}], "label": "Ninebark (Physocarpus)"}, {"name": "picea pungens", "zones": [{"zone": "Evergreens", "label": "Colorado Blue Spruce (Picea Pungens)"}], "label": "Colorado Blue Spruce (Picea Pungens)"}, {"name": "colorado blue spruce", "zones": [{"zone": "Evergreens", "label": "Colorado Blue Spruce (Picea Pungens)"}], "label": "Colorado Blue Spruce (Picea Pungens)"}, {"name": "pieris", "zones": [{"zone": "Shrubs", "label": "Andromeda (Pieris)"}], "label": "Andromeda (Pieris)"}, {"name": "andromeda", "zones": [{"zone": "Shrubs", "label": "Andromeda (Pieris)"}], "label": "Andromeda (Pieris)"}, {"name": "pinus", "zones": [{"zone": "Evergreens", "label": "Pine (Pinus)"}], "label": "Pine (Pinus)"}, {"name": "pine", "zones": [{"zone": "Evergreens", "label": "Pine (Pinus)"}], "label": "Pine (Pinus)"}, {"name": "platycodon", "zones": [{"zone": "Sun Perennials", "label": "Balloon Flower (platycodon)"}], "label": "Balloon Flower (platycodon)"}, {"name": "balloon flower", "zones": [{"zone": "Sun Perennials", "label": "Balloon Flower (platycodon)"}], "label": "Balloon Flower (platycodon)"}, {"name": "polemonium", "zones": [{"zone": "Shade Perennials", "label": "Jacob\u2019s Ladder (Polemonium)"}], "label": "Jacob\u2019s Ladder (Polemonium)"}, {"name": "jacob\u2019s ladder", "zones": [{"zone": "Shade Perennials", "label": "Jacob\u2019s Ladder (Polemonium)"}], "label": "Jacob\u2019s Ladder (Polemonium)"}, {"name": "populus tremuloides", "zones": [{"zone": "Shade And Ornamental Trees", "label": "Quaking Aspen (Populus Tremuloides)"}], "label": "Quaking Aspen (Populus Tremuloides)"}, {"name": "quaking aspen", "zones": [{"zone": "Shade And Ornamental Trees", "label": "Quaking Aspen (Populus Tremuloides)"}], "label": "Quaking Aspen (Populus Tremuloides)"}, {"name": "portulaca", "zones": [{"zone": "Annuals", "label": "Moss Rose (Portulaca)"}], "label": "Moss Rose (Portulaca)"}, {"name": "moss rose", "zones": [{"zone": "Annuals", "label": "Moss Rose (Portulaca)"}], "label": "Moss Rose (Portulaca)"}, {"name": "potentilla", "zones": [{"zone": "Shrubs", "label": "Cinquefoil (Potentilla)"}], "label": "Cinquefoil (Potentilla)"}, {"name": "cinquefoil", "zones": [{"zone": "Shrubs", "label": "Cinquefoil (Potentilla)"}], "label": "Cinquefoil (Potentilla)"}, {"name": "prunus tomentosa", "zones": [{"zone": "Shrubs", "label": "Nanking Cherry (Prunus Tomentosa)"}], "label": "Nanking Cherry (Prunus Tomentosa)"}, {"name": "nanking cherry", "zones": [{"zone": "Shrubs", "label": "Nanking Cherry (Prunus Tomentosa)"}], "label": "Nanking Cherry (Prunus Tomentosa)"}, {"name": "prunus triloba", "zones": [{"zone": "Shade And Ornamental Trees", "label": "Flowering Almond (Prunus Triloba)"}], "label": "Flowering Almond (Prunus Triloba)"}, {"name": "flowering almond", "zones": [{"zone": "Shade And Ornamental Trees", "label": "Flowering Almond (Prunus Triloba)"}], "label": "Flowering Almond (Prunus Triloba)"}, {"name": "pulmonaria", "zones": [{"zone": "Shade Perennials", "label": "Lungwort (Pulmonaria)"}], "label": "Lungwort (Pulmonaria)"}, {"name": "lungwort", "zones": [{"zone": "Shade Perennials", "label": "Lungwort (Pulmonaria)"}], "label": "Lungwort (Pulmonaria)"}, {"name": "purslane", "zones": [{"zone": "Annuals", "label": "Purslane"}], "label": "Purslane"}, {"name": "pyracantha", "zones": [{"zone": "Shrubs", "label": "Firethorn (pyracantha)"}], "label": "Firethorn (pyracantha)"}, {"name": "firethorn", "zones": [{"zone": "Shrubs", "label": "Firethorn (pyracantha)"}], "label": "Firethorn (pyracantha)"}, {"name": "pyrus", "zones": [{"zone": "Shade And Ornamental Trees", "label": "Pear (Pyrus)"}], "label": "Pear (Pyrus)"}, {"name": "pear", "zones": [{"zone": "Shade And Ornamental Trees", "label": "Pear (Pyrus)"}], "label": "Pear (Pyrus)"}, {"name": "quercus", "zones": [{"zone": "Shade And Ornamental Trees", "label": "Oak (Quercus)"}], "label": "Oak (Quercus)"}, {"name": "oak", "zones": [{"zone": "Shade And Ornamental Trees", "label": "Oak (Quercus)"}], "label": "Oak (Quercus)"}, {"name": "rhamnus", "zones": [{"zone": "Shrubs", "label": "Buckthorn (Rhamnus)"}], "label": "Buckthorn (Rhamnus)"}, {"name": "buckthorn", "zones": [{"zone": "Shrubs", "label": "Buckthorn (Rhamnus)"}], "label": "Buckthorn (Rhamnus)"}, {"name": "rhodadendron", "zones": [{"zone": "Shade Perennials", "label": "Rhododendron (Rhodadendron)"}], "label": "Rhododendron (Rhodadendron)"}, {"name": "rhododendron", "zones": [{"zone": "Shade Perennials", "label": "Rhododendron (Rhodadendron)"}], "label": "Rhododendron (Rhodadendron)"}, {"name": "rhus", "zones": [{"zone": "Shrubs", "label": "Sumac (Rhus)"}], "label": "Sumac (Rhus)"}, {"name": "sumac", "zones": [{"zone": "Shrubs", "label": "Sumac (Rhus)"}], "label": "Sumac (Rhus)"}, {"name": "ribes", "zones": [{"zone": "Shrubs", "label": "Currant (Ribes)"}], "label": "Currant (Ribes)"}, {"name": "currant", "zones": [{"zone": "Shrubs", "label": "Currant (Ribes)"}], "label": "Currant (Ribes)"}, {"name": "robinia", "zones": [{"zone": "Shade And Ornamental Trees", "label": "Black Locust (Robinia)"}], "label": "Black Locust (Robinia)"}, {"name": "black locust", "zones": [{"zone": "Shade And Ornamental Trees", "label": "Black Locust (Robinia)"}], "label": "Black Locust (Robinia)"}, {"name": "rodgersia", "zones": [{"zone": "Shade Perennials", "label": "Rodgersia"}], "label": "Rodgersia"}, {"name": "rudbeckia", "zones": [{"zone": "Sun Perennials", "label": "Black-eyed Susan (Rudbeckia)"}], "label": "Black-eyed Susan (Rudbeckia)"}, {"name": "black-eyed susan", "zones": [{"zone": "Sun Perennials", "label": "Black-eyed Susan (Rudbeckia)"}], "label": "Black-eyed Susan (Rudbeckia)"}, {"name": "sago palm", "zones": [{"zone": "Annuals", "label": "Sago Palm"}], "label": "Sago Palm"}, {"name": "salix", "zones": [{"zone": "Flowering Trees", "label": "Willow (Salix)"}, {"zone": "Shrubs", "label": "Willow (Salix)"}, {"zone": "Shade And Ornamental Trees", "label": "Willow (Salix)"}], "label": "Willow (Salix)"}, {"name": "willow", "zones": [{"zone": "Flowering Trees", "label": "Willow (Salix)"}, {"zone": "Shrubs", "label": "Willow (Salix)"}, {"zone": "Shade And Ornamental Trees", "label": "Willow (Salix)"}], "label": "Willow (Salix)"}, {"name": "salvia", "zones": [{"zone": "Annuals", "label": "Sage (Salvia)"}, {"zone": "Sun Perennials", "label": "Sage (Salvia)"}], "label": "Sage (Salvia)"}, {"name": "sage", "zones": [{"zone": "Annuals", "label": "Sage (Salvia)"}, {"zone": "Sun Perennials", "label": "Sage (Salvia)"}], "label": "Sage (Salvia)"}, {"name": "sambucus", "zones": [{"zone": "Shrubs", "label": "Elderberry (Sambucus)"}], "label": "Elderberry (Sambucus)"}, {"name": "elderberry", "zones": [{"zone": "Shrubs", "label": "Elderberry (Sambucus)"}], "label": "Elderberry (Sambucus)"}, {"name": "scabiosa", "zones": [{"zone": "Sun Perennials", "label": "Pincushion Flower (Scabiosa)"}], "label": "Pincushion Flower (Scabiosa)"}, {"name": "pincushion flower", "zones": [{"zone": "Sun Perennials", "label": "Pincushion Flower (Scabiosa)"}], "label": "Pincushion Flower (Scabiosa)"}, {"name": "schizachyrium", "zones": [{"zone": "Sun Perennials", "label": "Little Bluestem (Schizachyrium)"}], "label": "Little Bluestem (Schizachyrium)"}, {"name": "little bluestem", "zones": [{"zone": "Sun Perennials", "label": "Little Bluestem (Schizachyrium)"}], "label": "Little Bluestem (Schizachyrium)"}, {"name": "sedum", "zones": [{"zone": "Sun Perennials", "label": "Stonecrop (Sedum)"}], "label": "Stonecrop (Sedum)"}, {"name": "stonecrop", "zones": [{"zone": "Sun Perennials", "label": "Stonecrop (Sedum)"}], "label": "Stonecrop (Sedum)"}, {"name": "solidago", "zones": [{"zone": "Sun Perennials", "label": "Goldenrod (Solidago)"}], "label": "Goldenrod (Solidago)"}, {"name": "goldenrod", "zones": [{"zone": "Sun Perennials", "label": "Goldenrod (Solidago)"}], "label": "Goldenrod (Solidago)"}, {"name": "spiraea", "zones": [{"zone": "Shrubs", "label": "Spirea (Spiraea)"}], "label": "Spirea (Spiraea)"}, {"name": "spirea", "zones": [{"zone": "Shrubs", "label": "Spirea (Spiraea)"}], "label": "Spirea (Spiraea)"}, {"name": "stachys", "zones": [{"zone": "Sun Perennials", "label": "Lamb\u2019s Ear (Stachys)"}], "label": "Lamb\u2019s Ear (Stachys)"}, {"name": "lamb\u2019s ear", "zones": [{"zone": "Sun Perennials", "label": "Lamb\u2019s Ear (Stachys)"}], "label": "Lamb\u2019s Ear (Stachys)"}, {"name": "stokesia", "zones": [{"zone": "Sun Perennials", "label": "Stokes\u2019 Aster (Stokesia)"}], "label": "Stokes\u2019 Aster (Stokesia)"}, {"name": "stokes\u2019 aster", "zones": [{"zone": "Sun Perennials", "label": "Stokes\u2019 Aster (Stokesia)"}], "label": "Stokes\u2019 Aster (Stokesia)"}, {"name": "symphoricarpos", "zones": [{"zone": "Shrubs", "label": "Snowberry (Symphoricarpos)"}], "label": "Snowberry (Symphoricarpos)"}, {"name": "snowberry", "zones": [{"zone": "Shrubs", "label": "Snowberry (Symphoricarpos)"}], "label": "Snowberry (Symphoricarpos)"}, {"name": "syringa", "zones": [{"zone": "Flowering Trees", "label": "Lilac (Syringa)"}, {"zone": "Shrubs", "label": "Lilac (Syringa)"}], "label": "Lilac (Syringa)"}, {"name": "lilac", "zones": [{"zone": "Flowering Trees", "label": "Lilac (Syringa)"}, {"zone": "Shrubs", "label": "Lilac (Syringa)"}], "label": "Lilac (Syringa)"}, {"name": "taxodium", "zones": [{"zone": "Shade And Ornamental Trees", "label": "Bald Cypress (taxodium)"}], "label": "Bald Cypress (taxodium)"}, {"name": "bald cypress", "zones": [{"zone": "Shade And Ornamental Trees", "label": "Bald Cypress (taxodium)"}], "label": "Bald Cypress (taxodium)"}, {"name": "taxus", "zones": [{"zone": "Evergreens", "label": "Yew (Taxus)"}], "label": "Yew (Taxus)"}, {"name": "yew", "zones": [{"zone": "Evergreens", "label": "Yew (Taxus)"}], "label": "Yew (Taxus)"}, {"name": "thuja", "zones": [{"zone": "Evergreens", "label": "Arborvitae (Thuja)"}], "label": "Arborvitae (Thuja)"}, {"name": "arborvitae", "zones": [{"zone": "Evergreens", "label": "Arborvitae (Thuja)"}], "label": "Arborvitae (Thuja)"}, {"name": "tiarella", "zones": [{"zone": "Shade Perennials", "label": "Foamflower (Tiarella)"}], "label": "Foamflower (Tiarella)"}, {"name": "foamflower", "zones": [{"zone": "Shade Perennials", "label": "Foamflower (Tiarella)"}], "label": "Foamflower (Tiarella)"}, {"name": "tradescanthia", "zones": [{"zone": "Sun Perennials", "label": "Spiderwort (Tradescanthia)"}], "label": "Spiderwort (Tradescanthia)"}, {"name": "spiderwort", "zones": [{"zone": "Sun Perennials", "label": "Spiderwort (Tradescanthia)"}], "label": "Spiderwort (Tradescanthia)"}, {"name": "ulmus", "zones": [{"zone": "Flowering Trees", "label": "Elm (Ulmus)"}, {"zone": "Shade And Ornamental Trees", "label": "Elm (Ulmus)"}], "label": "Elm (Ulmus)"}, {"name": "elm", "zones": [{"zone": "Flowering Trees", "label": "Elm (Ulmus)"}, {"zone": "Shade And Ornamental Trees", "label": "Elm (Ulmus)"}], "label": "Elm (Ulmus)"}, {"name": "veronica", "zones": [{"zone": "Sun Perennials", "label": "Speedwell (Veronica)"}], "label": "Speedwell (Veronica)"}, {"name": "speedwell", "zones": [{"zone": "Sun Perennials", "label": "Speedwell (Veronica)"}], "label": "Speedwell (Veronica)"}, {"name": "viburnum", "zones": [{"zone": "Shrubs", "label": "Viburnum"}], "label": "Viburnum"}, {"name": "vinca", "zones": [{"zone": "Annuals", "label": "Periwinkle (Vinca)"}], "label": "Periwinkle (Vinca)"}, {"name": "periwinkle", "zones": [{"zone": "Annuals", "label": "Periwinkle (Vinca)"}], "label": "Periwinkle (Vinca)"}, {"name": "weeping cherry", "zones": [{"zone": "Flowering Trees", "label": "Weeping Cherry"}], "label": "Weeping Cherry"}, {"name": "weigela", "zones": [{"zone": "Shrubs", "label": "Weigela"}], "label": "Weigela"}, {"name": "wisteria", "zones": [{"zone": "Sun Perennials", "label": "Wisteria"}], "label": "Wisteria"}, {"name": "rosa", "zones": [{"zone": "Roses", "label": "Rose (Rosa)"}], "label": "Rose (Rosa)"}, {"name": "rose", "zones": [{"zone": "Roses", "label": "Rose (Rosa)"}], "label": "Rose (Rosa)"}];
+
+const input = document.getElementById("search-input");
+const suggestions = document.getElementById("suggestions");
+
+input.addEventListener("input", function(e) {
+  const query = e.target.value.toLowerCase();
+  const matches = plantData.filter(p => p.name.includes(query)).slice(0, 10);
+  suggestions.innerHTML = "";
+  matches.forEach(m => {
+    const div = document.createElement("div");
+    div.textContent = m.label;
+    div.onclick = () => {
+      input.value = m.label;
+      suggestions.style.display = "none";
+      highlightZones(m.zones, m.label);
+    };
+    suggestions.appendChild(div);
+  });
+  suggestions.style.display = matches.length ? "block" : "none";
+});
+
+document.addEventListener("click", function(e) {
+  if (!document.getElementById("search-box").contains(e.target)) {
+    suggestions.style.display = "none";
+  }
+});
+
+function highlightZones(zones, label) {
+  map.eachLayer(layer => {
+    if (layer.feature && layer.feature.properties) {
+      const isMatch = zones.some(z => z.zone === layer.feature.properties.name);
+      if (isMatch) {
+        layer.setStyle({ color: 'orange', weight: 4 });
+        layer.bindPopup("<strong>" + label + "</strong><br>Zone: " + layer.feature.properties.name).openPopup();
+        map.fitBounds(layer.getBounds());
+      } else if (layer.setStyle) {
+        layer.setStyle({ color: '#666', weight: 1 });
+      }
+    }
+  });
+}
+
+// Move zoom control below the Find Me button
+map.zoomControl.setPosition('topleft');
+document.querySelector('.leaflet-control-zoom').style.marginTop = '50px';
+</script>
+
+
+<button id="locate-button">Find Me</button>
+
+<script>
+document.getElementById('locate-button').onclick = function() {
+  map.locate({ setView: true, maxZoom: 17 });
+
+  function onLocationFound(e) {
+    if (window.userLocationMarker) {
+      map.removeLayer(window.userLocationMarker);
+    }
+    window.userLocationMarker = L.marker(e.latlng).addTo(map)
+      .bindPopup("You are here").openPopup();
+
+    if (window.userAccuracyCircle) {
+      map.removeLayer(window.userAccuracyCircle);
+    }
+    window.userAccuracyCircle = L.circle(e.latlng, e.accuracy / 2, {
+      color: '#136AEC',
+      fillColor: '#136AEC',
+      fillOpacity: 0.15
+    }).addTo(map);
+  }
+
+  function onLocationError(e) {
+    alert(e.message);
+  }
+
+  map.on('locationfound', onLocationFound);
+  map.on('locationerror', onLocationError);
+};
+
+// Move zoom control below the Find Me button
+map.zoomControl.setPosition('topleft');
+document.querySelector('.leaflet-control-zoom').style.marginTop = '50px';
+</script>
+
+</body>
+
+</html>
